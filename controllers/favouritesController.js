@@ -1,47 +1,56 @@
-let favourites = [];
+import Favourite from '../models/Favourites.js';
 
-export const getFavourites = (req, res) => {
-  res.json(favourites);
-};
-
-export const addFavourite = (req, res) => {
-  const newFavourite = req.body;
-  favourites.push(newFavourite);
-  res.status(201).json(newFavourite);
-};
-
-export const updateFavourite = (req, res) => {
-  const id = req.params.id;
-  const favourite = favourites.find(fav => fav.movieId == id);
-
-  if (!favourite) {
-    return res.status(404).json({ message: `Favourite ${id} not found` });
+export const getFavourites = async (req, res) => {
+  try {
+    const favourites = await Favourite.find();
+    res.json(favourites)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
   }
-
-  Object.assign(favourite, req.body);
-  res.status(200).json(favourite);
 };
 
-export const replaceFavourite = (req, res) => {
-  const id = req.params.id;
-  const index = favourites.findIndex(fav => fav.movieId == id);
-
-  if (index === -1) {
-    return res.status(404).json({ message: `Favourite ${id} not found` });
+export const addFavourite = async (req, res) => {
+  try {
+    const newFavourite = await Favourite.create(req.body);
+    res.status(201).json({ newFavourite });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
+}
 
-  favourites[index] = { ...req.body, movieId: Number(id) };
-  res.json(favourites[index]);
+export const updateFavourite = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const updated = await Favourite.findOneAndUpdate(
+      { movieId: id }, req.body, { new: true }
+    );
+    if (!updated)
+      return res.status(404).json({ message: `Favourite ${id} not found` });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 };
 
-export const deleteFavourite = (req, res) => {
+export const replaceFavourite = async (req, res) => {
   const id = req.params.id;
-  const index = favourites.findIndex(fav => fav.movieId == id);
-
-  if (index === -1) {
-    return res.status(404).json({ message: `Favourite ${id} not found` });
+  try {
+    const replaced = await Favourite.findOneAndReplace(
+      { movieId: id }, { ...req.body, movieId: Number(id) }, { new: true }
+    );
+    if (!replaced) return res.status(404).json({ message: `Favourite ${id} not found` });
+    res.json(replaced);
+  }catch(err){
+    res.status(400).json({message: err.message});
   }
+};
 
-  favourites.splice(index, 1);
-  res.status(200).json({ message: `Deleted favourite ${id}` });
+export const deleteFavourite = async (req, res) => {
+  try {
+    const deleted = await Favourite.findOneAndDelete({ movieId: req.params.id });
+    if (!deleted) return res.status(404).json({ message: `Favourite ${req.params.id} not found` });
+    res.status(200).json({ message: `Deleted favourite ${req.params.id}` });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 };
